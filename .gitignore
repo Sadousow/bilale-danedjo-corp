@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# logo source (large, only optimized versions are committed)
+/public/brand/logo-original.*
+/public/brand/_inspect.*
+
+# logo source (large, only optimized versions are committed)
+/public/brand/logo-original.*
+/public/brand/_inspect.*
