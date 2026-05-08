@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Send } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
 
 export default function ContactForm() {
@@ -84,7 +85,7 @@ export default function ContactForm() {
         className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue hover:bg-brand-blue-light text-white px-4 py-3 rounded-md font-semibold transition-colors"
       >
         Envoyer via WhatsApp
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+        <Send className="w-4 h-4" />
       </button>
     </form>
   );

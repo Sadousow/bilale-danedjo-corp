@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { whatsappLink } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -63,9 +65,7 @@ export default function FaqPage() {
               >
                 <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-brand-blue">
                   {item.q}
-                  <svg className="w-5 h-5 text-brand-gold group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className="w-5 h-5 text-brand-gold group-open:rotate-180 transition-transform" />
                 </summary>
                 <p className="mt-3 text-sm text-slate-600 leading-relaxed">{item.a}</p>
               </details>
@@ -82,8 +82,9 @@ export default function FaqPage() {
                 href={whatsappLink("Bonjour, j'ai une question.")}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-brand-gold hover:bg-brand-gold-dark text-white px-5 py-2.5 rounded-md text-sm font-semibold transition-colors"
+                className="inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-gold-dark text-white px-5 py-2.5 rounded-md text-sm font-semibold transition-colors"
               >
+                <WhatsAppIcon className="w-4 h-4" />
                 WhatsApp
               </a>
               <Link

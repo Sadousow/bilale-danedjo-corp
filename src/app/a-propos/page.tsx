@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Award, Handshake, Headphones, Heart } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { siteConfig } from "@/lib/site";
 
@@ -61,11 +62,23 @@ export default function AboutPage() {
             <aside className="space-y-6">
               <div className="bg-brand-blue/5 border border-brand-blue/10 rounded-xl p-6">
                 <h3 className="font-display font-bold text-brand-blue text-lg">Nos valeurs</h3>
-                <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                  <li className="flex gap-2"><span className="text-brand-gold">●</span><span><strong className="text-brand-blue">Qualité</strong> — produits sélectionnés avec soin.</span></li>
-                  <li className="flex gap-2"><span className="text-brand-gold">●</span><span><strong className="text-brand-blue">Confiance</strong> — relation durable avec nos clients.</span></li>
-                  <li className="flex gap-2"><span className="text-brand-gold">●</span><span><strong className="text-brand-blue">Service</strong> — réactivité et conseil personnalisé.</span></li>
-                  <li className="flex gap-2"><span className="text-brand-gold">●</span><span><strong className="text-brand-blue">Engagement</strong> — au service du marché guinéen.</span></li>
+                <ul className="mt-4 space-y-4 text-sm text-slate-700">
+                  <li className="flex gap-3">
+                    <Award className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <span><strong className="text-brand-blue">Qualité</strong> — produits sélectionnés avec soin.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <Handshake className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <span><strong className="text-brand-blue">Confiance</strong> — relation durable avec nos clients.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <Headphones className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <span><strong className="text-brand-blue">Service</strong> — réactivité et conseil personnalisé.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <Heart className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <span><strong className="text-brand-blue">Engagement</strong> — au service du marché guinéen.</span>
+                  </li>
                 </ul>
               </div>
 

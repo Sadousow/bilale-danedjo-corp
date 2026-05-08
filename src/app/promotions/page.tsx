@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { getPromoProducts } from "@/lib/products";
 import { whatsappLink } from "@/lib/site";
 
@@ -49,6 +50,7 @@ export default function PromotionsPage() {
               rel="noopener noreferrer"
               className="mt-6 inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-gold-dark text-white px-6 py-3 rounded-md font-semibold transition-colors"
             >
+              <WhatsAppIcon className="w-5 h-5" />
               Demander un devis sur WhatsApp
             </a>
           </div>

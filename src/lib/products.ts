@@ -13,24 +13,21 @@ export type Product = {
   inStock: boolean;
 };
 
-export const categories: { key: Category; label: string; description: string; icon: string }[] = [
+export const categories: { key: Category; label: string; description: string }[] = [
   {
     key: "alimentation",
     label: "Alimentation générale",
     description: "Riz, sucre, huile, boissons, conserves, pâtes alimentaires",
-    icon: "🛒",
   },
   {
     key: "entretien",
     label: "Produits d'entretien",
     description: "Détergents, savons, javel, désinfectants, produits ménagers",
-    icon: "🧴",
   },
   {
     key: "electromenager",
     label: "Électroménager",
     description: "Ventilateurs, réfrigérateurs, téléviseurs, mixeurs, cuisinières",
-    icon: "🏠",
   },
 ];
 

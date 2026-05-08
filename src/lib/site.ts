@@ -4,8 +4,8 @@ export const siteConfig = {
   slogan: "Votre partenaire du quotidien",
   description:
     "Distribution et commerce de détail en Guinée — alimentation générale, produits d'entretien et électroménager.",
-  whatsapp: "224620000000",
-  phone: "+224 620 00 00 00",
+  whatsapp: "224624390332",
+  phone: "+224 624 39 03 32",
   email: "contact@bdcorporation.com",
   address: "Conakry, République de Guinée",
   hours: "Lun – Sam : 08h00 – 20h00",
