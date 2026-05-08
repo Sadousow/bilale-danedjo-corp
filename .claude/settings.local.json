@@ -14,7 +14,8 @@
       "Bash(file \"C:/Users/Sow/AppData/Local/Temp/1de0ce91-f4c1-4b73-9411-40087e3f7c1d.tmp\" \"C:/Users/Sow/AppData/Local/Temp/3f98432b-1b54-4aa5-8b51-bed44abb6349.tmp\" \"C:/Users/Sow/AppData/Local/Temp/a95b6f55-82f4-4ada-ae33-7fedcd557929.tmp\" \"C:/Users/Sow/AppData/Local/Temp/9f74564d-16b4-4ca3-a894-21ea53f3ec58.tmp\" \"C:/Users/Sow/AppData/Local/Temp/fbec1846-3be4-4eb3-99a2-6cdd7252027c.tmp\" 2>&1)",
       "Bash(mkdir -p \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand\" && cp \"C:/Users/Sow/AppData/Local/Temp/1de0ce91-f4c1-4b73-9411-40087e3f7c1d.tmp\" \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/logo-original.jpg\" && ls -la \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/\")",
       "Bash(node scripts/optimize-logo.mjs)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(git commit *)"
     ]
   }
 }
