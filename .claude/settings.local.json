@@ -15,7 +15,10 @@
       "Bash(mkdir -p \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand\" && cp \"C:/Users/Sow/AppData/Local/Temp/1de0ce91-f4c1-4b73-9411-40087e3f7c1d.tmp\" \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/logo-original.jpg\" && ls -la \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/\")",
       "Bash(node scripts/optimize-logo.mjs)",
       "Bash(git rm *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(xargs -I {} file {})",
+      "Bash(cp \"C:/Users/Sow/AppData/Local/Temp/916a796f-33a3-4602-ba19-ed7314fb9e58.tmp\" \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/logo-source.webp\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

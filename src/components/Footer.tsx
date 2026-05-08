@@ -12,7 +12,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
-            <Logo variant="light" showTagline />
+            <Logo size="lg" />
             <p className="mt-4 text-sm text-slate-300 leading-relaxed">
               {siteConfig.description}
             </p>
