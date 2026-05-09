@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
+import Reveal from "@/components/motion/Reveal";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { getPromoProducts } from "@/lib/products";
 import { whatsappLink } from "@/lib/site";
 
@@ -29,14 +31,16 @@ export default function PromotionsPage() {
               Aucune promotion active pour le moment. Revenez bientôt !
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <Stagger className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" staggerDelay={0.06}>
               {promos.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <StaggerItem key={p.id}>
+                  <ProductCard product={p} />
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           )}
 
-          <div className="mt-16 bg-gradient-to-br from-brand-blue to-brand-blue-light text-white rounded-2xl p-8 sm:p-12 text-center">
+          <Reveal className="mt-16 bg-gradient-to-br from-brand-blue to-brand-blue-light text-white rounded-2xl p-8 sm:p-12 text-center">
             <h2 className="font-display text-2xl sm:text-3xl font-bold">
               Une demande de devis particulière ?
             </h2>
@@ -53,7 +57,7 @@ export default function PromotionsPage() {
               <WhatsAppIcon className="w-5 h-5" />
               Demander un devis sur WhatsApp
             </a>
-          </div>
+          </Reveal>
         </div>
       </section>
     </>

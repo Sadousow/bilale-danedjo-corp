@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
+import Reveal from "@/components/motion/Reveal";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import ContactForm from "./ContactForm";
 import { siteConfig, whatsappLink } from "@/lib/site";
 
@@ -30,16 +32,16 @@ export default function ContactPage() {
       <section className="py-12 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-10">
-            <div className="space-y-6">
+            <Reveal className="space-y-6">
               <div className="bg-white border border-slate-200 rounded-xl p-6">
                 <h3 className="font-display font-bold text-brand-blue text-xl">
                   Coordonnées
                 </h3>
-                <ul className="mt-5 space-y-4 text-sm">
+                <Stagger className="mt-5 space-y-4 text-sm" staggerDelay={0.07}>
                   {items.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <li key={item.label} className="flex gap-3">
+                      <StaggerItem key={item.label} className="flex gap-3" y={12}>
                         <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue shrink-0">
                           <Icon className="w-5 h-5" strokeWidth={1.75} />
                         </div>
@@ -53,10 +55,10 @@ export default function ContactPage() {
                             <p className="text-slate-600">{item.value}</p>
                           )}
                         </div>
-                      </li>
+                      </StaggerItem>
                     );
                   })}
-                </ul>
+                </Stagger>
 
                 <a
                   href={whatsappLink("Bonjour, je souhaite obtenir des informations.")}
@@ -77,9 +79,9 @@ export default function ContactPage() {
                   loading="lazy"
                 />
               </div>
-            </div>
+            </Reveal>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8">
+            <Reveal delay={0.15} className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8">
               <h3 className="font-display font-bold text-brand-blue text-xl">
                 Envoyer un message
               </h3>
@@ -87,7 +89,7 @@ export default function ContactPage() {
                 Remplissez ce formulaire — votre message s&apos;ouvrira directement dans WhatsApp.
               </p>
               <ContactForm />
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
+import Reveal from "@/components/motion/Reveal";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { whatsappLink } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -57,22 +59,23 @@ export default function FaqPage() {
 
       <section className="py-12 sm:py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="space-y-3">
+          <Stagger className="space-y-3" staggerDelay={0.05}>
             {faqs.map((item, i) => (
-              <details
-                key={i}
-                className="group bg-white border border-slate-200 rounded-xl px-5 py-4 hover:border-brand-blue/40 transition-colors"
-              >
-                <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-brand-blue">
-                  {item.q}
-                  <ChevronDown className="w-5 h-5 text-brand-gold group-open:rotate-180 transition-transform" />
-                </summary>
-                <p className="mt-3 text-sm text-slate-600 leading-relaxed">{item.a}</p>
-              </details>
+              <StaggerItem key={i} y={12}>
+                <details
+                  className="group bg-white border border-slate-200 rounded-xl px-5 py-4 hover:border-brand-blue/40 transition-colors"
+                >
+                  <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-brand-blue">
+                    {item.q}
+                    <ChevronDown className="w-5 h-5 text-brand-gold group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <p className="mt-3 text-sm text-slate-600 leading-relaxed">{item.a}</p>
+                </details>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
 
-          <div className="mt-12 bg-brand-blue text-white rounded-2xl p-8 text-center">
+          <Reveal className="mt-12 bg-brand-blue text-white rounded-2xl p-8 text-center">
             <h3 className="font-display text-xl font-bold">Une autre question ?</h3>
             <p className="mt-2 text-slate-200 text-sm">
               Notre équipe répond rapidement sur WhatsApp ou via le formulaire de contact.
@@ -94,7 +97,7 @@ export default function FaqPage() {
                 Formulaire de contact
               </Link>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
     </>

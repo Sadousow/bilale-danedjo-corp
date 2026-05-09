@@ -18,7 +18,9 @@
       "Bash(git commit *)",
       "Bash(xargs -I {} file {})",
       "Bash(cp \"C:/Users/Sow/AppData/Local/Temp/916a796f-33a3-4602-ba19-ed7314fb9e58.tmp\" \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/logo-source.webp\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(git checkout *)",
+      "Bash(npm install *)"
     ]
   }
 }
