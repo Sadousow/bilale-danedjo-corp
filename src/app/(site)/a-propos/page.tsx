@@ -1,0 +1,121 @@
+import type { Metadata } from "next";
+import { Award, Handshake, Headphones, Heart } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
+import Reveal from "@/components/motion/Reveal";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { getSettings } from "@/lib/settings";
+
+export const metadata: Metadata = {
+  title: "À propos",
+  description:
+    "Notre histoire, notre mission et nos valeurs.",
+};
+
+export default async function AboutPage() {
+  const settings = await getSettings();
+  return (
+    <>
+      <PageHeader
+        eyebrow="Notre entreprise"
+        title={`À propos de ${settings.companyName}`}
+        description="Une entreprise guinéenne au service des familles, boutiques, restaurants, hôtels et entreprises depuis sa création."
+      />
+
+      {settings.aboutText && (
+        <section className="py-12">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+              {settings.aboutText}
+            </p>
+          </div>
+        </section>
+      )}
+
+      <section className="py-16 sm:py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-3 gap-10">
+            <div className="lg:col-span-2 space-y-6 text-slate-700 leading-relaxed">
+              <Reveal>
+                <h2 className="font-display text-2xl font-bold text-brand-blue">Notre histoire</h2>
+                <p className="mt-4">
+                  {settings.companyName} est une entreprise guinéenne spécialisée dans la
+                  distribution et le commerce de détail. Implantée à Conakry, elle
+                  s&apos;est rapidement imposée comme un partenaire de confiance pour les
+                  particuliers et les professionnels grâce à la qualité de ses produits
+                  et à la fiabilité de ses services.
+                </p>
+                <p className="mt-4">
+                  De l&apos;alimentation générale aux produits d&apos;entretien en
+                  passant par l&apos;électroménager, nous accompagnons le quotidien des
+                  familles guinéennes ainsi que les besoins logistiques des boutiques,
+                  restaurants, hôtels et entreprises.
+                </p>
+              </Reveal>
+
+              <Reveal delay={0.1}>
+                <h2 className="font-display text-2xl font-bold text-brand-blue mt-10">Notre mission</h2>
+                <p className="mt-4">
+                  Offrir à nos clients des produits de qualité à des prix justes, avec
+                  un service client exemplaire et une livraison rapide partout en
+                  Guinée. Nous voulons être le partenaire du quotidien sur lequel chacun
+                  peut compter.
+                </p>
+              </Reveal>
+
+              <Reveal delay={0.15}>
+                <h2 className="font-display text-2xl font-bold text-brand-blue mt-10">Notre vision</h2>
+                <p className="mt-4">
+                  Devenir une référence du commerce général en Guinée en alliant
+                  tradition commerçante et outils modernes — catalogue digital, commande
+                  rapide par WhatsApp, livraison à domicile et service après-vente.
+                </p>
+              </Reveal>
+            </div>
+
+            <aside className="space-y-6">
+              <Reveal delay={0.2}>
+                <div className="bg-brand-blue/5 border border-brand-blue/10 rounded-xl p-6">
+                  <h3 className="font-display font-bold text-brand-blue text-lg">Nos valeurs</h3>
+                  <Stagger className="mt-4 space-y-4 text-sm text-slate-700" staggerDelay={0.08}>
+                    {[
+                      { Icon: Award, label: "Qualité", desc: "produits sélectionnés avec soin." },
+                      { Icon: Handshake, label: "Confiance", desc: "relation durable avec nos clients." },
+                      { Icon: Headphones, label: "Service", desc: "réactivité et conseil personnalisé." },
+                      { Icon: Heart, label: "Engagement", desc: "au service du marché guinéen." },
+                    ].map(({ Icon, label, desc }) => (
+                      <StaggerItem key={label} className="flex gap-3" y={12}>
+                        <Icon className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
+                        <span>
+                          <strong className="text-brand-blue">{label}</strong> — {desc}
+                        </span>
+                      </StaggerItem>
+                    ))}
+                  </Stagger>
+                </div>
+              </Reveal>
+
+              <Reveal delay={0.3}>
+                <div className="bg-brand-blue text-white rounded-xl p-6">
+                  <h3 className="font-display font-bold text-lg">Quelques chiffres</h3>
+                  <Stagger className="mt-4 grid grid-cols-2 gap-4" staggerDelay={0.08}>
+                    {[
+                      { value: "500+", label: "Produits" },
+                      { value: "1 000+", label: "Clients" },
+                      { value: "3", label: "Catégories" },
+                      { value: "24h", label: "Délai moyen" },
+                    ].map((s) => (
+                      <StaggerItem key={s.label} y={12}>
+                        <p className="text-2xl font-bold text-brand-gold-light">{s.value}</p>
+                        <p className="text-xs text-slate-200">{s.label}</p>
+                      </StaggerItem>
+                    ))}
+                  </Stagger>
+                </div>
+              </Reveal>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}

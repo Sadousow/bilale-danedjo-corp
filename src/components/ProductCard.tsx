@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { type Product, formatPrice } from "@/lib/products";
-import { whatsappLink } from "@/lib/site";
+import { useShopConfig } from "@/components/shop/shop-config";
 import WhatsAppIcon from "./WhatsAppIcon";
+import AddToCartButton from "./shop/AddToCartButton";
 
 type Props = { product: Product };
 
 export default function ProductCard({ product }: Props) {
+  const shop = useShopConfig();
   const reduceMotion = useReducedMotion();
   const message = `Bonjour, je suis intéressé par le produit "${product.name}" (${formatPrice(product.price)}). Pouvez-vous me donner plus d'informations ?`;
 
@@ -70,17 +72,30 @@ export default function ProductCard({ product }: Props) {
           {product.unit && <span className="text-xs text-slate-500">/ {product.unit}</span>}
         </div>
 
-        <motion.a
-          whileHover={reduceMotion ? undefined : { scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          href={whatsappLink(message)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center justify-center gap-2 w-full bg-brand-gold hover:bg-brand-gold-dark text-white text-sm font-semibold px-4 py-2.5 rounded-md transition-colors"
-        >
-          <WhatsAppIcon className="w-4 h-4" />
-          Commander
-        </motion.a>
+        <div className="mt-4 space-y-2">
+          <AddToCartButton
+            disabled={!product.inStock}
+            line={{
+              sku: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.image,
+              unit: product.unit,
+            }}
+          />
+
+          <motion.a
+            whileHover={reduceMotion ? undefined : { scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            href={shop.whatsappLink(message)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 w-full border border-brand-gold text-brand-gold-dark hover:bg-brand-gold hover:text-white text-sm font-semibold px-4 py-2.5 rounded-md transition-colors"
+          >
+            <WhatsAppIcon className="w-4 h-4" />
+            WhatsApp
+          </motion.a>
+        </div>
       </div>
     </motion.article>
   );

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 120" width="340" height="120" role="img" aria-label="Guygou">
+  <title>Guygou</title>
+  <!-- Version monochrome, pour l'impression thermique 80 mm.
+       Un seul trait, aucun aplat, aucun degrade : une imprimante de caisse
+       bon marche transforme les surfaces pleines en taches grises. -->
+  <text x="4" y="78"
+        font-family="Poppins, 'Segoe UI', system-ui, sans-serif"
+        font-size="68" font-weight="700" letter-spacing="-2.7"
+        fill="#000000">guygou</text>
+  <circle cx="88" cy="27" r="7.5" fill="#000000"/>
+  <circle cx="115" cy="27" r="7.5" fill="#000000"/>
+  <path d="M6 96 L20 107 L34 96 L48 107 L62 96 L76 107 L90 96 L104 107 L118 96 L132 107 L146 96 L160 107 L174 96 L188 107 L202 96 L216 107 L230 96"
+        fill="none" stroke="#000000" stroke-width="5"
+        stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" width="88" height="88" role="img" aria-label="Guygou">
+  <title>Guygou</title>
+  <!-- Icone d'application et favicon. Le ticket au bord dechire porte les
+       deux points du trema : la marque reste reconnaissable a 16 pixels,
+       la ou le mot ne serait plus lisible. -->
+  <rect x="0" y="0" width="88" height="88" rx="21" fill="#0E3B2E"/>
+  <path d="M27 19 L61 19 L61 60 L55 68 L49 60 L43 68 L37 60 L31 68 L27 62 Z" fill="#F7F1E4"/>
+  <circle cx="39" cy="31" r="4" fill="#5FB63F"/>
+  <circle cx="51" cy="31" r="4" fill="#5FB63F"/>
+  <rect x="34" y="42" width="20" height="4.5" rx="2" fill="#0E3B2E"/>
+  <rect x="34" y="51" width="13" height="4.5" rx="2" fill="#0E3B2E"/>
+</svg>

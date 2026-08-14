@@ -3,8 +3,25 @@ import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import Logo from "./Logo";
 import { FacebookIcon, InstagramIcon, TikTokIcon } from "./SocialIcons";
 import { siteConfig } from "@/lib/site";
+import { getSettings } from "@/lib/settings";
 
-export default function Footer() {
+export default async function Footer() {
+  const settings = await getSettings();
+  const shop = {
+    name: settings.companyName,
+    // Le repli ne décrit plus le commerce d'origine : une boutique de
+    // vêtements affichait « alimentation générale et électroménager ».
+    description: settings.slogan || siteConfig.description,
+    address: settings.companyAddress,
+    phone: settings.companyPhone,
+    email: settings.companyEmail,
+    hours: settings.openingHours || siteConfig.hours,
+    social: {
+      facebook: settings.socialFacebook,
+      instagram: settings.socialInstagram,
+      tiktok: settings.socialTiktok,
+    },
+  };
   const year = new Date().getFullYear();
 
   return (
@@ -14,7 +31,7 @@ export default function Footer() {
           <div>
             <Logo size="lg" />
             <p className="mt-4 text-sm text-slate-300 leading-relaxed">
-              {siteConfig.description}
+              {shop.description}
             </p>
           </div>
 
@@ -44,38 +61,38 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex gap-2">
                 <MapPin className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
-                <span>{siteConfig.address}</span>
+                <span>{shop.address}</span>
               </li>
               <li className="flex gap-2">
                 <Phone className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
-                <a href={`tel:${siteConfig.phone}`} className="hover:text-brand-gold transition-colors">{siteConfig.phone}</a>
+                <a href={`tel:${shop.phone}`} className="hover:text-brand-gold transition-colors">{shop.phone}</a>
               </li>
               <li className="flex gap-2">
                 <Mail className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
-                <a href={`mailto:${siteConfig.email}`} className="hover:text-brand-gold transition-colors break-all">{siteConfig.email}</a>
+                <a href={`mailto:${shop.email}`} className="hover:text-brand-gold transition-colors break-all">{shop.email}</a>
               </li>
               <li className="flex gap-2">
                 <Clock className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" strokeWidth={1.75} />
-                <span>{siteConfig.hours}</span>
+                <span>{shop.hours}</span>
               </li>
             </ul>
 
             <div className="flex gap-3 mt-5">
-              <a href={siteConfig.social.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-gold flex items-center justify-center transition-colors">
+              {shop.social.facebook && (<a href={shop.social.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-gold flex items-center justify-center transition-colors">
                 <FacebookIcon className="w-4 h-4" />
-              </a>
-              <a href={siteConfig.social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-gold flex items-center justify-center transition-colors">
+              </a>)}
+              {shop.social.instagram && (<a href={shop.social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-gold flex items-center justify-center transition-colors">
                 <InstagramIcon className="w-4 h-4" />
-              </a>
-              <a href={siteConfig.social.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-gold flex items-center justify-center transition-colors">
+              </a>)}
+              {shop.social.tiktok && (<a href={shop.social.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="w-9 h-9 rounded-full bg-white/10 hover:bg-brand-gold flex items-center justify-center transition-colors">
                 <TikTokIcon className="w-4 h-4" />
-              </a>
+              </a>)}
             </div>
           </div>
         </div>
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
-          <p>© {year} {siteConfig.name}. Tous droits réservés.</p>
+          <p>© {year} {shop.name}. Tous droits réservés.</p>
           <p>Distribution & commerce — Conakry, Guinée</p>
         </div>
       </div>

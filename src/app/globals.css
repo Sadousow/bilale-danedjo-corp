@@ -1,14 +1,26 @@
 @import "tailwindcss";
 
+/* Couleurs de Guÿgou — la plateforme.
+   Ces valeurs habillent l'outil : back-office, caisse, connexion et zone
+   plateforme. Chaque boutique écrase ces variables avec ses propres couleurs
+   sur sa vitrine, depuis `(site)/layout.tsx` : le marchand reste maître de
+   sa devanture, Guÿgou de son outil.
+
+   Les noms `--brand-blue` et `--brand-gold` sont historiques et désignent
+   désormais la couleur principale et la couleur d'accent, quelles qu'elles
+   soient. Les renommer imposerait de toucher chaque composant sans rien
+   apporter — ils sont déjà pilotés par variable partout. */
 :root {
   --background: #ffffff;
-  --foreground: #0a1628;
-  --brand-blue: #0b2e63;
-  --brand-blue-dark: #08214a;
-  --brand-blue-light: #1a4a8e;
-  --brand-gold: #d4a017;
-  --brand-gold-dark: #b88a10;
-  --brand-gold-light: #f0c44a;
+  --foreground: #14110f;
+  --brand-blue: #0e3b2e;
+  --brand-blue-dark: #072018;
+  --brand-blue-light: #1c6b4f;
+  --brand-gold: #5fb63f;
+  --brand-gold-dark: #46902c;
+  --brand-gold-light: #8fd14f;
+  /* La couleur du papier du ticket, pour les fonds de la plateforme. */
+  --paper: #f7f1e4;
 }
 
 @theme inline {
@@ -20,8 +32,11 @@
   --color-brand-gold: var(--brand-gold);
   --color-brand-gold-dark: var(--brand-gold-dark);
   --color-brand-gold-light: var(--brand-gold-light);
+  --color-paper: var(--paper);
   --font-sans: var(--font-poppins);
-  --font-display: var(--font-playfair);
+  /* Les titres emploient la police du logo. Pour revenir à une serif, il
+     suffit de recharger une famille dans layout.tsx et de la pointer ici. */
+  --font-display: var(--font-poppins);
 }
 
 body {
@@ -51,11 +66,78 @@ html {
 }
 
 .bg-brand-gradient {
-  background: linear-gradient(135deg, #0b2e63 0%, #1a4a8e 100%);
+  background: linear-gradient(
+    135deg,
+    var(--brand-blue) 0%,
+    var(--brand-blue-light) 100%
+  );
+}
+
+/* Impression : seul le contenu de <main> est imprimé.
+   Le format de page (rouleau 80 mm ou A4) est défini par chaque page
+   concernée, via une balise <style> locale. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  main,
+  main * {
+    visibility: visible;
+  }
+
+  main {
+    position: absolute;
+    inset: 0;
+    padding: 0 !important;
+  }
+}
+
+/* Style visuel de la vitrine.
+   Les trois variables sont redéclarées par la boutique selon le thème choisi
+   par le marchand (voir `presetStyle` dans src/lib/blocks.ts). Les valeurs
+   ci-dessous servent de repli hors vitrine — back-office, page de connexion. */
+:root {
+  --shop-radius: 0.75rem;
+  --shop-spacing: 4rem;
+  --shop-shadow: 0 1px 3px rgb(15 23 42 / 0.08);
+  --shop-shadow-hover: 0 20px 25px -5px rgb(15 23 42 / 0.12);
+}
+
+.shop-card {
+  border-radius: var(--shop-radius);
+  box-shadow: var(--shop-shadow);
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.shop-card:hover {
+  box-shadow: var(--shop-shadow-hover);
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-card {
+    transition: none;
+  }
+  .shop-card:hover {
+    transform: none;
+  }
 }
 
 .text-brand-gradient {
-  background: linear-gradient(135deg, #d4a017 0%, #f0c44a 100%);
+  background: linear-gradient(
+    135deg,
+    var(--brand-gold) 0%,
+    var(--brand-gold-light) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

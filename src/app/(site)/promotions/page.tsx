@@ -1,0 +1,69 @@
+import type { Metadata } from "next";
+import PageHeader from "@/components/PageHeader";
+import ProductCard from "@/components/ProductCard";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
+import Reveal from "@/components/motion/Reveal";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { getPromoProducts } from "@/lib/catalog";
+import { buildWhatsAppLink } from "@/lib/site";
+import { getSettings } from "@/lib/settings";
+
+export const metadata: Metadata = {
+  title: "Promotions",
+  description:
+    "Promotions, offres spéciales et produits vedettes du moment.",
+};
+
+export default async function PromotionsPage() {
+  const settings = await getSettings();
+  const promos = await getPromoProducts();
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Offres en cours"
+        title="Promotions du moment"
+        description="Réductions, offres spéciales et produits vedettes — pour faire de bonnes affaires sur les essentiels du quotidien."
+      />
+
+      <section className="py-12 sm:py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {promos.length === 0 ? (
+            <div className="text-center py-20 text-slate-500">
+              Aucune promotion active pour le moment. Revenez bientôt !
+            </div>
+          ) : (
+            <Stagger className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" staggerDelay={0.06}>
+              {promos.map((p) => (
+                <StaggerItem key={p.id}>
+                  <ProductCard product={p} />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          )}
+
+          <Reveal className="mt-16 bg-gradient-to-br from-brand-blue to-brand-blue-light text-white rounded-2xl p-8 sm:p-12 text-center">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold">
+              Une demande de devis particulière ?
+            </h2>
+            <p className="mt-3 text-slate-200 max-w-2xl mx-auto">
+              Pour les commandes en gros (boutiques, restaurants, hôtels), contactez-nous
+              directement pour un tarif personnalisé.
+            </p>
+            {settings.whatsappNumber && (
+              <a
+                href={buildWhatsAppLink(settings.whatsappNumber, "Bonjour, je souhaite obtenir un devis pour une commande professionnelle.")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-gold-dark text-white px-6 py-3 rounded-md font-semibold transition-colors"
+              >
+                <WhatsAppIcon className="w-5 h-5" />
+                Demander un devis sur WhatsApp
+              </a>
+            )}
+          </Reveal>
+        </div>
+      </section>
+    </>
+  );
+}

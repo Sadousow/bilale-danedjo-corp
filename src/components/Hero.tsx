@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ShoppingBasket, SprayCan, Refrigerator } from "lucide-react";
-import { siteConfig, whatsappLink } from "@/lib/site";
+import { useShopConfig } from "@/components/shop/shop-config";
 import WhatsAppIcon from "./WhatsAppIcon";
 
 export default function Hero() {
+  const shop = useShopConfig();
   const reduceMotion = useReducedMotion();
 
   const fadeUp = (delay = 0) => ({
@@ -17,6 +19,22 @@ export default function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-brand-gradient">
+      {shop.heroImageUrl && (
+        <div className="absolute inset-0" aria-hidden>
+          <Image
+            src={shop.heroImageUrl}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          {/* Voile sombre : sans lui, le texte blanc devient illisible sur
+              une photo claire — et le marchand choisit sa photo, pas nous. */}
+          <div className="absolute inset-0 bg-brand-blue-dark/75" />
+        </div>
+      )}
+
       <div className="absolute inset-0 opacity-10" aria-hidden>
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -40,21 +58,35 @@ export default function Hero() {
               className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-brand-gold-light bg-white/10 px-4 py-1.5 rounded-full backdrop-blur"
             >
               <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse" />
-              Distribution & commerce — Conakry
+              {shop.heroEyebrow || shop.address}
             </motion.span>
 
             <motion.h1
               {...fadeUp(0.1)}
               className="mt-6 font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight"
             >
-              {siteConfig.slogan.split(" ").slice(0, -1).join(" ")}{" "}
-              <span className="text-brand-gold-light">{siteConfig.slogan.split(" ").slice(-1)}</span>
+              {(() => {
+                // Le dernier mot du titre est mis en couleur d'accent.
+                const title = shop.heroTitle || shop.slogan;
+                const words = title.split(" ");
+                const last = words.pop() ?? "";
+                return (
+                  <>
+                    {words.join(" ")}{words.length ? " " : ""}
+                    <span className="text-brand-gold-light">{last}</span>
+                  </>
+                );
+              })()}
             </motion.h1>
 
-            <motion.p {...fadeUp(0.2)} className="mt-5 text-lg text-slate-200 max-w-xl">
-              Alimentation générale, produits d&apos;entretien et électroménager —
-              à des prix justes, livrés rapidement à Conakry et partout en Guinée.
-            </motion.p>
+            {shop.heroSubtitle && (
+              <motion.p
+                {...fadeUp(0.2)}
+                className="mt-5 text-lg text-slate-200 max-w-xl"
+              >
+                {shop.heroSubtitle}
+              </motion.p>
+            )}
 
             <motion.div {...fadeUp(0.3)} className="mt-8 flex flex-wrap gap-4">
               <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} whileTap={{ scale: 0.97 }}>
@@ -69,7 +101,7 @@ export default function Hero() {
               <motion.a
                 whileHover={reduceMotion ? undefined : { y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                href={whatsappLink("Bonjour, je souhaite passer commande.")}
+                href={shop.whatsappLink("Bonjour, je souhaite passer commande.")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/30 text-white px-6 py-3.5 rounded-md font-semibold transition-colors"

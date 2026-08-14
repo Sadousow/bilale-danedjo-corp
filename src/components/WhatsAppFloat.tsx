@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { whatsappLink } from "@/lib/site";
+import { useShopConfig } from "@/components/shop/shop-config";
 import WhatsAppIcon from "./WhatsAppIcon";
 
 export default function WhatsAppFloat() {
+  const shop = useShopConfig();
   return (
     <motion.a
       initial={{ scale: 0, opacity: 0 }}
@@ -12,7 +13,7 @@ export default function WhatsAppFloat() {
       transition={{ delay: 1, type: "spring", stiffness: 260, damping: 20 }}
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.92 }}
-      href={whatsappLink("Bonjour, je souhaite obtenir des informations sur vos produits.")}
+      href={shop.whatsappLink("Bonjour, je souhaite obtenir des informations sur vos produits.")}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Discuter sur WhatsApp"

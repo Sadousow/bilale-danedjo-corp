@@ -1,0 +1,936 @@
+// Plateforme SaaS multi-tenant — boutique, caisse, facturation
+//
+// Chaque table métier porte un `tenantId`. Aucune requête applicative
+// n'utilise le client Prisma brut : tout passe par le client dérivé de
+// `src/lib/tenant-db.ts`, qui injecte et vérifie ce filtre.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+
+// ---------------------------------------------------------------- Plateforme
+
+/// Décision **administrative** de la plateforme, rien d'autre.
+///
+/// Le non-paiement ne s'écrit pas ici : il se lit entièrement dans
+/// `Subscription.status`. Mélanger les deux rendait les fermetures
+/// indistinguables — un marchand fermé pour impayé perdait l'accès au
+/// back-office, donc tout moyen de payer.
+enum TenantStatus {
+  ESSAI
+  ACTIF
+  /// Fermée par la plateforme : vitrine, caisse et back-office
+  SUSPENDU
+  RESILIE
+}
+
+/// Un tenant = une entreprise abonnée à la plateforme.
+model Tenant {
+  id     String       @id @default(cuid())
+  slug   String       @unique // « bilale » → bilale.tondomaine.com
+  name   String
+  status TenantStatus @default(ESSAI)
+
+  // Encaissement du marchand — le secret est chiffré au repos (AES-256-GCM)
+  djomyClientId     String?
+  djomyClientSecret String?
+  djomyEnabled      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  domains          TenantDomain[]
+  subscription     Subscription?
+  users            User[]
+  categories       Category[]
+  products         Product[]
+  customers        Customer[]
+  sales            Sale[]
+  saleItems        SaleItem[]
+  stockMovements   StockMovement[]
+  payments         Payment[]
+  counters         Counter[]
+  documents        Document[]
+  documentItems    DocumentItem[]
+  documentPayments DocumentPayment[]
+  deliveryZones    DeliveryZone[]
+  orders           Order[]
+  orderItems       OrderItem[]
+  settings         Settings?
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------- Abonnements
+
+/// Compteurs de la plateforme elle-même — sans rattachement à une boutique.
+model PlatformCounter {
+  key   String @id
+  value Int    @default(0)
+}
+
+/// Jeton à usage unique envoyé par email.
+///
+/// Sert à deux choses aujourd'hui : réinitialiser un mot de passe, et
+/// confirmer une adresse. Le mécanisme est le même — un secret haché, une
+/// durée courte, une seule utilisation — et le dupliquer aurait multiplié
+/// les endroits où se tromper.
+///
+/// Table de plateforme : elle sert les trois familles de comptes — personnel
+/// d'une boutique, client d'une boutique, agent de la plateforme.
+///
+/// Seul le **haché** du jeton est conservé. Le jeton en clair n'existe que
+/// dans le lien envoyé : une copie de la base ne permet donc pas de prendre
+/// la main sur les demandes en cours.
+model VerificationToken {
+  id        String @id @default(cuid())
+  tokenHash String @unique
+
+  /// staff | client | plateforme | email-client
+  scope     String
+  subjectId String
+  /// Boutique concernée. Null pour un agent de la plateforme.
+  tenantId  String?
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  /// La table s'appelait PasswordReset à sa création : on garde son nom en
+  /// base pour ne pas imposer de migration de données.
+  @@map("PasswordReset")
+  @@index([scope, subjectId])
+  @@index([expiresAt])
+}
+
+/// Compteur d'échecs d'authentification.
+///
+/// Table de plateforme : la connexion précède la résolution du tenant, et une
+/// adresse IP doit être comptée toutes boutiques confondues.
+///
+/// `key` est un HMAC, jamais l'email ou l'IP en clair : ce tableau n'a pas
+/// besoin d'être lisible, seulement comparable.
+model AuthAttempt {
+  key         String    @id
+  count       Int       @default(0)
+  /// Nombre de verrous déjà posés — sert à allonger les suivants.
+  lockCount   Int       @default(0)
+  firstAt     DateTime  @default(now())
+  lastAt      DateTime  @default(now())
+  lockedUntil DateTime?
+
+  /// Pour le nettoyage des lignes oubliées.
+  @@index([lastAt])
+}
+
+model Plan {
+  id    String @id @default(cuid())
+  code  String @unique // demarrage, boutique, pro
+  name  String
+  /// Prix mensuel en GNF
+  priceMonthly Int
+  description  String @default("")
+  position     Int    @default(0)
+  active       Boolean @default(true)
+
+  /// Quotas — 0 signifie « illimité »
+  maxProducts Int @default(0)
+  maxUsers    Int @default(0)
+
+  /// Fonctions ouvertes par ce plan
+  featureShop      Boolean @default(false) // boutique en ligne et commandes
+  featureInvoicing Boolean @default(false) // proformas, factures, bons de livraison
+  featureDomain    Boolean @default(false) // domaine personnalisé
+
+  subscriptions        Subscription[] @relation("SubscriptionPlan")
+  pendingSubscriptions Subscription[] @relation("SubscriptionPendingPlan")
+
+  @@index([active])
+}
+
+enum SubscriptionStatus {
+  ESSAI
+  ACTIF
+  /// Échéance dépassée : période de grâce, la boutique fonctionne encore
+  IMPAYE
+  /// Grâce épuisée : vitrine fermée, back-office accessible pour régulariser
+  SUSPENDU
+  RESILIE
+}
+
+model Subscription {
+  id     String             @id @default(cuid())
+  status SubscriptionStatus @default(ESSAI)
+
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   Plan   @relation("SubscriptionPlan", fields: [planId], references: [id])
+
+  /// Baisse d'offre demandée par le marchand, appliquée à la prochaine
+  /// échéance. Une montée d'offre prend effet tout de suite et ne passe
+  /// donc jamais par ce champ : le marchand a payé pour la période en
+  /// cours, on ne lui retire pas ce qu'il a déjà réglé.
+  pendingPlanId String?
+  pendingPlan   Plan?   @relation("SubscriptionPendingPlan", fields: [pendingPlanId], references: [id])
+
+  /// Numéro qui reçoit les demandes de paiement de l'abonnement.
+  ///
+  /// Volontairement distinct des numéros de `Settings` : ceux-là s'affichent
+  /// sur la vitrine et dans le bouton WhatsApp, alors que celui-ci ne regarde
+  /// que la plateforme. Sans ce champ, encaisser un abonnement obligeait le
+  /// marchand à publier son numéro personnel.
+  billingPhone String?
+
+  /// Fin de la période en cours — essai compris
+  currentPeriodEnd DateTime
+  /// Fin de la période de grâce après un impayé
+  graceEndsAt      DateTime?
+  /// Date de résiliation demandée par le marchand
+  cancelledAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices SubscriptionInvoice[]
+
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@index([pendingPlanId])
+}
+
+enum SubscriptionInvoiceStatus {
+  EN_ATTENTE
+  PAYEE
+  ECHOUEE
+  ANNULEE
+}
+
+model SubscriptionInvoice {
+  id        String @id @default(cuid())
+  /// Référence lisible : ABO-2026-0001
+  reference String @unique
+  year      Int
+  number    Int
+
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  /// Instantané, pour que la facture reste juste si le plan change ensuite
+  planName String
+  amount   Int
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  status SubscriptionInvoiceStatus @default(EN_ATTENTE)
+
+  /// Paiement Djomy côté plateforme
+  paymentReference String?
+  paymentUrl       String?
+  paidAt           DateTime?
+  /// Vrai si un agent a marqué la facture réglée à la main
+  paidManually     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, number])
+  @@index([status])
+  @@index([subscriptionId])
+}
+
+/// Compte de l'éditeur de la plateforme — distinct des comptes marchands.
+model PlatformUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@index([email])
+}
+
+enum AuditAction {
+  TENANT_CREE
+  TENANT_SUSPENDU
+  TENANT_REACTIVE
+  TENANT_RESILIE
+  IMPERSONATION
+}
+
+/// Journal des actions sensibles de la console plateforme.
+/// Il n'est jamais purgé automatiquement : c'est la trace de qui a fait quoi.
+model AuditLog {
+  id      String      @id @default(cuid())
+  action  AuditAction
+  details String      @default("")
+
+  /// Boutique concernée. Conservée sous forme d'identifiant et de nom :
+  /// le journal doit rester lisible même après suppression de la boutique.
+  tenantId   String?
+  tenantName String  @default("")
+
+  platformUserId String?
+  platformUser   PlatformUser? @relation(fields: [platformUserId], references: [id])
+  actorName      String        @default("")
+
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tenantId])
+}
+
+/// Domaine personnalisé branché sur une boutique.
+model TenantDomain {
+  id                String  @id @default(cuid())
+  host              String  @unique // bilale-danedjo.com
+  verified          Boolean @default(false)
+  verificationToken String
+  isPrimary         Boolean @default(false)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------- Utilisateurs
+
+enum Role {
+  ADMIN // accès total, gestion des utilisateurs
+  GERANT // back-office complet sauf utilisateurs
+  CAISSIER // POS uniquement
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String
+  name         String
+  passwordHash String
+  role         Role     @default(CAISSIER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sales            Sale[]
+  stockMovements   StockMovement[]
+  payments         Payment[]
+  documents        Document[]
+  documentPayments DocumentPayment[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------- Catalogue
+
+model Category {
+  id          String    @id @default(cuid())
+  key         String // alimentation, entretien, electromenager
+  label       String
+  description String    @default("")
+  position    Int       @default(0)
+  products    Product[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  sku         String // identifiant lisible, ex. riz-parfume-25kg
+  name        String
+  description String  @default("")
+  image       String  @default("")
+  unit        String? // sac, bidon, carton, pièce...
+
+  price Int // prix de vente en GNF (entier, pas de centimes)
+  cost  Int @default(0) // prix d'achat en GNF (pour la marge)
+
+  stock    Int @default(0)
+  minStock Int @default(5) // seuil d'alerte rupture
+
+  popular Boolean @default(false)
+  active  Boolean @default(true)
+
+  // Promotion (optionnelle)
+  promoDiscount Int? // pourcentage de remise
+  oldPrice      Int? // ancien prix affiché
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+  documentItems  DocumentItem[]
+  orderItems     OrderItem[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@index([categoryId])
+  @@index([active])
+}
+
+// ---------------------------------------------------------------- Clients
+
+model Customer {
+  id      String  @id @default(cuid())
+  name    String
+  phone   String?
+  address String?
+  notes   String  @default("")
+
+  /// Date à laquelle le client a prouvé qu'il relève cette adresse.
+  /// Null = adresse non confirmée : le compte existe, mais rien ne dit
+  /// qu'elle lui appartient.
+  emailVerifiedAt DateTime?
+
+  // Solde de crédit : montant que le client DOIT (en GNF). 0 = à jour.
+  creditBalance Int @default(0)
+  creditLimit   Int @default(0) // 0 = pas de plafond défini
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Informations de facturation
+  nif  String? // numéro d'identification fiscale du client
+  rccm String?
+
+  // Compte boutique (facultatif) — permet de suivre ses commandes en ligne
+  email        String?
+  passwordHash String?
+
+  sales     Sale[]
+  payments  Payment[]
+  documents Document[]
+  orders    Order[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, phone])
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([name])
+}
+
+// ---------------------------------------------------------------- Ventes
+
+enum PaymentMethod {
+  ESPECES
+  ORANGE_MONEY
+  MTN_MOMO
+  VIREMENT
+  CREDIT
+}
+
+enum SaleStatus {
+  COMPLETEE
+  ANNULEE
+}
+
+model Sale {
+  id     String @id @default(cuid())
+  /// Numéro de ticket, séquentiel par tenant (alimenté par `Counter`)
+  number Int    @default(0)
+
+  subtotal Int // somme des lignes avant remise
+  discount Int @default(0) // remise globale en GNF
+  total    Int // subtotal - discount
+  paid     Int @default(0) // montant réellement encaissé
+  change   Int @default(0) // monnaie rendue
+  due      Int @default(0) // reste à payer (crédit)
+
+  method PaymentMethod @default(ESPECES)
+  status SaleStatus    @default(COMPLETEE)
+  note   String        @default("")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  items     SaleItem[]
+  payments  Payment[]
+  documents Document[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([customerId])
+}
+
+model SaleItem {
+  id     String @id @default(cuid())
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  // Instantané au moment de la vente (le produit peut changer ensuite)
+  name      String
+  unitPrice Int
+  cost      Int @default(0)
+  quantity  Int
+  lineTotal Int
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([saleId])
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------- Stock
+
+enum MovementType {
+  ENTREE // réapprovisionnement
+  SORTIE // perte, casse, consommation interne
+  VENTE // décrément automatique par le POS
+  AJUSTEMENT // correction d'inventaire
+  RETOUR // annulation de vente
+}
+
+model StockMovement {
+  id        String       @id @default(cuid())
+  productId String
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      MovementType
+  quantity  Int // toujours positif ; le signe est porté par `type`
+  before    Int // stock avant
+  after     Int // stock après
+  reason    String       @default("")
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------- Règlements de crédit
+
+model Payment {
+  id     String        @id @default(cuid())
+  amount Int
+  method PaymentMethod @default(ESPECES)
+  note   String        @default("")
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------- Facturation
+
+enum DocumentType {
+  PROFORMA // facture proforma / devis
+  FACTURE // facture définitive
+  BON_LIVRAISON // bon de livraison
+}
+
+enum DocumentStatus {
+  BROUILLON // modifiable, non numéroté définitivement
+  EMIS // émis au client
+  ACCEPTE // proforma acceptée par le client
+  REFUSE // proforma refusée
+  CONVERTI // proforma transformée en facture
+  PAYE_PARTIEL // facture partiellement réglée
+  PAYE // facture soldée
+  LIVRE // bon de livraison honoré (stock décrémenté)
+  ANNULE
+}
+
+/// Compteurs de numérotation, une ligne par type et par année.
+/// Exemple de clé : "FACTURE-2026"
+model Counter {
+  key   String
+  value Int    @default(0)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, key])
+}
+
+model Document {
+  id        String         @id @default(cuid())
+  type      DocumentType
+  status    DocumentStatus @default(BROUILLON)
+  /// Numéro séquentiel dans l'année, pour le type concerné
+  number    Int            @default(0)
+  year      Int
+  /// Référence lisible : PRO-2026-0001, FAC-2026-0001, BL-2026-0001
+  reference String
+
+  // Instantané du client au moment de l'émission
+  clientName    String
+  clientPhone   String?
+  clientAddress String?
+  clientNif     String?
+  clientRccm    String?
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  issueDate  DateTime  @default(now())
+  dueDate    DateTime? // échéance de règlement (facture)
+  validUntil DateTime? // fin de validité (proforma)
+
+  // Montants, tous en GNF entiers. Les prix unitaires sont hors taxes.
+  vatEnabled  Boolean @default(true)
+  vatRate     Int     @default(18) // pourcentage
+  subtotal    Int     @default(0) // somme des lignes HT
+  discount    Int     @default(0) // remise globale HT
+  taxableBase Int     @default(0) // subtotal - discount
+  vatAmount   Int     @default(0)
+  total       Int     @default(0) // TTC
+  paidAmount  Int     @default(0)
+
+  note            String  @default("")
+  terms           String  @default("") // conditions de paiement
+  deliveryAddress String?
+  deliveredAt     DateTime?
+  /// Vrai si le stock a déjà été décrémenté par ce document
+  stockApplied    Boolean @default(false)
+
+  // Chaînage proforma → facture → bon de livraison
+  parentId String?
+  parent   Document?  @relation("DocumentChain", fields: [parentId], references: [id])
+  children Document[] @relation("DocumentChain")
+
+  // Origine éventuelle : une vente encaissée en caisse
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id])
+
+  // Origine éventuelle : une commande passée sur le site
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    DocumentItem[]
+  payments DocumentPayment[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, reference])
+  @@unique([tenantId, type, year, number])
+  @@index([tenantId])
+  @@index([type, status])
+  @@index([customerId])
+  @@index([issueDate])
+}
+
+model DocumentItem {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  position    Int     @default(0)
+  name        String
+  description String  @default("")
+  unit        String?
+  unitPrice   Int // HT
+  quantity    Int
+  discount    Int     @default(0) // remise sur la ligne, en GNF
+  lineTotal   Int // (unitPrice × quantity) − discount
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([documentId])
+  @@index([productId])
+}
+
+model DocumentPayment {
+  id     String        @id @default(cuid())
+  amount Int
+  method PaymentMethod @default(ESPECES)
+  note   String        @default("")
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([documentId])
+}
+
+// ---------------------------------------------------------------- Boutique en ligne
+
+enum OrderStatus {
+  RECUE // commande passée sur le site
+  CONFIRMEE // validée par l'équipe
+  PREPAREE // colis prêt
+  EXPEDIEE // en cours de livraison
+  LIVREE // remise au client (stock décrémenté)
+  ANNULEE
+}
+
+enum OrderPaymentMethod {
+  A_LA_LIVRAISON
+  EN_LIGNE
+}
+
+enum OrderPaymentStatus {
+  EN_ATTENTE
+  PAYEE
+  ECHOUEE
+  REMBOURSEE
+}
+
+model DeliveryZone {
+  id        String  @id @default(cuid())
+  name      String
+  /// Frais de livraison en GNF
+  fee       Int     @default(0)
+  /// Livraison offerte au-dessus de ce montant de commande (0 = jamais)
+  freeAbove Int     @default(0)
+  delay     String  @default("") // ex. « 24 à 48 h »
+  active    Boolean @default(true)
+  position  Int     @default(0)
+
+  orders Order[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([active])
+}
+
+model Order {
+  id        String @id @default(cuid())
+  number    Int    @default(0)
+  year      Int
+  /// Référence lisible : CMD-2026-0001
+  reference String
+
+  status         OrderStatus        @default(RECUE)
+  paymentMethod  OrderPaymentMethod @default(A_LA_LIVRAISON)
+  paymentStatus  OrderPaymentStatus @default(EN_ATTENTE)
+
+  // Instantané du client au moment de la commande
+  clientName    String
+  clientPhone   String
+  clientEmail   String?
+  clientAddress String
+  clientNotes   String  @default("")
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  zoneId   String?
+  zone     DeliveryZone? @relation(fields: [zoneId], references: [id])
+  zoneName String        @default("")
+
+  subtotal    Int @default(0)
+  deliveryFee Int @default(0)
+  total       Int @default(0)
+  paidAmount  Int @default(0)
+
+  /// Référence de transaction chez le prestataire de paiement
+  paymentReference String?
+  paymentProvider  String?
+  paidAt           DateTime?
+
+  /// Vrai si le stock a déjà été décrémenté par cette commande
+  stockApplied Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items     OrderItem[]
+  documents Document[]
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, reference])
+  @@unique([tenantId, year, number])
+  @@index([tenantId])
+  @@index([status])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  position  Int     @default(0)
+  name      String
+  unit      String?
+  unitPrice Int
+  quantity  Int
+  lineTotal Int
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------- Paramètres
+
+/// Réglages d'une boutique — une ligne par tenant.
+model Settings {
+  tenantId String @id
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  companyName    String @default("Bilale et Danedjo Corporation SARLU")
+  companyAddress String @default("Conakry, République de Guinée")
+  companyPhone   String @default("")
+  companyEmail   String @default("")
+  whatsappNumber String @default("") // format international sans +, ex. 224624390332
+  slogan         String @default("")
+
+  // ---------------------------------------------------------- Apparence
+  logoUrl      String @default("")
+  heroImageUrl String @default("")
+  /// Couleurs en hexadécimal, ex. #0B2E63
+  /// Palette de départ d'une boutique neuve.
+  ///
+  /// Un ardoise très sombre et un ambre chaud : deux teintes neutres qui
+  /// s'accordent avec n'importe quel logo téléversé ensuite. Les valeurs
+  /// précédentes étaient celles du commerce d'origine — toute boutique neuve
+  /// lui ressemblait tant que le marchand n'y touchait pas.
+  primaryColor String @default("#1F2937")
+  accentColor  String @default("#B45309")
+  /// Style visuel : classique | epure | chaleureux
+  themePreset  String @default("classique")
+  /// Composition de la page d'accueil.
+  /// Format : [{ "id": "…", "type": "produits", "visible": true, "props": {…} }]
+  /// Toujours relu par parseBlocks() avant rendu : jamais de balisage ici.
+  homeBlocks   Json?
+  /// Composition en cours d'édition, visible uniquement dans l'aperçu du
+  /// back-office. Les visiteurs voient toujours `homeBlocks`.
+  homeBlocksDraft Json?
+  themePresetDraft String?
+
+  // Textes de la page d'accueil
+  heroEyebrow  String @default("")
+  heroTitle    String @default("")
+  heroSubtitle String @default("")
+  /// Quatre arguments affichés en page d'accueil.
+  /// Format : [{ "title": "…", "text": "…" }]
+  highlights   Json?
+  aboutText    String @default("")
+
+  // Coordonnées complémentaires
+  openingHours     String @default("")
+  socialFacebook   String @default("")
+  socialInstagram  String @default("")
+  socialTiktok     String @default("")
+  nif            String @default("")
+  rccm           String @default("")
+
+  bankName    String @default("")
+  bankAccount String @default("")
+  bankIban    String @default("")
+  bankSwift   String @default("")
+
+  defaultVatRate       Int    @default(18)
+  vatEnabledByDefault  Boolean @default(true)
+  paymentTerms         String @default("Règlement à 30 jours à compter de la date de facturation.")
+  proformaValidityDays Int    @default(30)
+  documentFooter       String @default("")
+  signatureLabel       String @default("Cachet et signature")
+
+  // Boutique en ligne
+  /// La vitrine est-elle ouverte aux visiteurs ?
+  ///
+  /// Faux à la création : une boutique neuve n'a ni produit, ni logo, ni
+  /// textes. La servir telle quelle donnerait une coquille vide à quiconque
+  /// reçoit l'adresse. Le marchand publie quand il est prêt.
+  ///
+  /// À distinguer de `shopEnabled`, qui ne ferme que le tunnel de commande
+  /// et laisse le catalogue consultable.
+  shopPublished        Boolean @default(false)
+  shopEnabled          Boolean @default(true)
+  onlinePaymentEnabled Boolean @default(false)
+  minOrderAmount       Int     @default(0)
+  orderConfirmation    String  @default("Merci ! Nous vous appelons pour confirmer votre commande.")
+
+  updatedAt DateTime @updatedAt
+}
