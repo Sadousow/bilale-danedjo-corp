@@ -43,19 +43,47 @@ racine, ils redirigent vers l'accueil.
 
 ## 3. Variables d'environnement
 
-```
-NEXT_PUBLIC_ROOT_DOMAIN="tondomaine.com"
-TENANT_SECRET_KEY="<32 caractères aléatoires>"
+### Sans elles, rien ne démarre
 
-# Rattachement automatique des domaines personnalisés (facultatif)
-VERCEL_TOKEN="..."
+| Variable | Pourquoi |
+| --- | --- |
+| `DATABASE_URL` | La base. Sur Neon, l'URL *poolée* |
+| `DIRECT_URL` | La même sans `-pooler` — c'est elle qui joue les migrations |
+| `SESSION_SECRET` | Signe les sessions. 32 caractères minimum, sinon l'application refuse de servir la moindre page |
+| `TENANT_SECRET_KEY` | Chiffre les clés de paiement des marchands. 32 caractères minimum. **La perdre rend illisibles toutes les clés déjà enregistrées** |
+| `NEXT_PUBLIC_ROOT_DOMAIN` | `guygou.com` en production. Laisser `localhost:3000` ferait pointer chaque marchand vers la machine du visiteur |
+
+### Sans elles, une fonction manque en silence
+
+| Variable | Ce qui tombe |
+| --- | --- |
+| `CRON_SECRET` | **La facturation ne tourne pas du tout.** En production, la route refuse de s'exécuter sans ce secret plutôt que de s'ouvrir à n'importe qui. Aucune facture ne part, aucune boutique n'est suspendue |
+| `DJOMY_CLIENT_ID` / `DJOMY_CLIENT_SECRET` | Aucun lien de paiement d'abonnement. Les marchands voient « le paiement en ligne est momentanément indisponible » |
+| `RESEND_API_KEY` / `MAIL_FROM` | Ni mot de passe oublié, ni vérification d'adresse, ni rappel d'échéance |
+| `S3_*` | Le téléversement d'images est désactivé — couleurs et textes restent modifiables |
+| `SIGNUP_ALERT_EMAIL` | Aucune alerte à l'inscription d'une boutique |
+
+### Facultatif
+
+```
+VERCEL_TOKEN="..."               # rattache les domaines des marchands tout seul
 VERCEL_PROJECT_ID="prj_..."
 VERCEL_TEAM_ID="team_..."        # uniquement si le projet est dans une équipe
+CSP_REPORT_ONLY="1"              # première mise en ligne : observer sans bloquer
 ```
 
 Sans les variables Vercel, tout fonctionne : la vérification DNS a lieu, et
 l'application affiche simplement la marche à suivre pour ajouter le domaine à
 la main dans le tableau de bord.
+
+### Une dette laissée en évidence
+
+`next.config.ts` porte `typescript: { ignoreBuildErrors: true }`. Le garde
+d'isolation injecte `tenantId` à l'exécution, mais les types générés par Prisma
+continuent de l'exiger des appelants : 45 erreurs sur une couture qui
+fonctionne, et un build qui refusait de livrer du code qui tourne. Tant que
+cette ligne est là, **aucune** erreur de type n'arrête un déploiement, y
+compris les vraies.
 
 ---
 
@@ -165,20 +193,18 @@ Le slogan, lui, vient bien des réglages.
 
 ---
 
-## 10. Vérification restée en suspens
-
-Le typecheck et ESLint avaient été passés au vert juste avant l'ajout des
-domaines personnalisés et des clés Djomy. Ces trois derniers écrans
-(`DomainsManager`, `PaymentKeysForm`, `parametres/page.tsx`) et leurs actions
-n'ont **pas** été compilés : mon environnement d'exécution est tombé avant.
-
-À lancer avant de pousser :
+## 10. Vérification avant de pousser
 
 ```bash
-npm run lint
-npx tsc --noEmit
-npm run build
+npm run lint                     # vert
+npx tsx scripts/test-abonnement.mjs
+npm run build                    # arrêter le serveur de dev d'abord :
+                                 # il verrouille la DLL du moteur Prisma
 ```
+
+`npx tsc --noEmit` **ne passe pas** : 45 erreurs, toutes sur la couture du
+garde multi-tenant décrite au §3. Le build les ignore volontairement. Ne pas
+lire ce rouge comme une régression, ni s'y habituer.
 
 ---
 
