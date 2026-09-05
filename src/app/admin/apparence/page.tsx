@@ -40,9 +40,6 @@ export default async function AppearancePage() {
           highlights: settings.highlights,
           aboutText: settings.aboutText,
           openingHours: settings.openingHours,
-          socialFacebook: settings.socialFacebook,
-          socialInstagram: settings.socialInstagram,
-          socialTiktok: settings.socialTiktok,
         }}
       />
     </>

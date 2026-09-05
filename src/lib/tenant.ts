@@ -5,28 +5,18 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { platformDb } from "@/lib/db";
+import { classifyHost } from "@/lib/host";
+
+/*
+ * Réexportés pour ne pas casser les appelants : `classifyHost` reste
+ * l'entrée naturelle depuis « le tenant ». La logique, elle, vit dans un
+ * module pur et testable.
+ */
+export { classifyHost, isSlugAvailableFormat, RESERVED } from "@/lib/host";
+export type { HostKind } from "@/lib/host";
 
 /** En-tête interne posé par `src/proxy.ts`. */
 export const TENANT_HOST_HEADER = "x-tenant-host";
-
-/** Sous-domaines qui n'appartiennent à aucun marchand. */
-const RESERVED = new Set([
-  "www",
-  "app",
-  "api",
-  "admin",
-  "superadmin",
-  "mail",
-  "smtp",
-  "ftp",
-  "cdn",
-  "static",
-  "assets",
-  "blog",
-  "docs",
-  "support",
-  "status",
-]);
 
 export type ResolvedTenant = {
   id: string;
@@ -34,49 +24,6 @@ export type ResolvedTenant = {
   name: string;
   status: "ESSAI" | "ACTIF" | "SUSPENDU" | "RESILIE";
 };
-
-function rootDomain(): string {
-  return (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000").toLowerCase();
-}
-
-type HostKind =
-  | { kind: "platform" }
-  | { kind: "subdomain"; slug: string }
-  | { kind: "custom"; host: string };
-
-/**
- * Analyse purement textuelle du host — aucune requête en base.
- * C'est la seule partie qui peut tourner sur l'edge.
- */
-export function classifyHost(rawHost: string | null | undefined): HostKind {
-  const host = (rawHost ?? "").toLowerCase().split(",")[0].trim();
-  if (!host) return { kind: "platform" };
-
-  const root = rootDomain();
-  const hostname = host.split(":")[0];
-  const rootname = root.split(":")[0];
-
-  if (hostname === rootname) return { kind: "platform" };
-
-  if (hostname.endsWith(`.${rootname}`)) {
-    const sub = hostname.slice(0, -(rootname.length + 1));
-    // On ignore un éventuel « www. » de tête : www.bilale → bilale
-    const slug = sub.startsWith("www.") ? sub.slice(4) : sub;
-
-    if (!slug || slug.includes(".")) return { kind: "platform" };
-    if (RESERVED.has(slug)) return { kind: "platform" };
-    return { kind: "subdomain", slug };
-  }
-
-  return { kind: "custom", host: hostname };
-}
-
-/** Vrai si le slug est utilisable pour une nouvelle boutique. */
-export function isSlugAvailableFormat(slug: string): boolean {
-  return (
-    /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/.test(slug) && !RESERVED.has(slug)
-  );
-}
 
 /**
  * Tenant de la requête courante, ou null si on est sur la zone plateforme

@@ -17,6 +17,7 @@ const SCOPED = new Set([
   "User", "Category", "Product", "Customer", "Sale", "SaleItem",
   "StockMovement", "Payment", "Counter", "Document", "DocumentItem",
   "DocumentPayment", "DeliveryZone", "Order", "OrderItem", "Settings",
+  "MetaCatalogItem",
 ]);
 
 /** Réplique de la garde de src/lib/tenant-db.ts. */
@@ -135,6 +136,53 @@ async function main() {
     await dbB.product.deleteMany({});
     const survivorsA = await dbA.product.count();
     check("un deleteMany de B n'efface pas les produits de A", survivorsA === 1);
+
+    console.log("\nCatalogue Meta");
+
+    /*
+     * `MetaCatalogItem` est le dernier modèle ajouté à la garde. Le vérifier
+     * ici n'est pas du zèle : un modèle métier absent du Set TENANT_SCOPED
+     * n'est filtré par rien, et l'oubli ne produit aucune erreur — juste une
+     * boutique qui voit les décisions de publication d'une autre.
+     */
+    const prodA2 = await dbA.product.create({
+      data: { sku: "mil-50kg", name: "Mil A", price: 300, categoryId: catA.id },
+    });
+    const itemA = await dbA.metaCatalogItem.create({
+      data: { productId: prodA2.id, published: true },
+    });
+    check("A peut publier un de ses articles", itemA.published === true);
+    check("le tenantId est injecté par la garde", itemA.tenantId === a.id);
+
+    const vus = await dbB.metaCatalogItem.findMany();
+    check("B ne voit aucune publication de A", vus.length === 0);
+
+    const vole = await dbB.metaCatalogItem.findUnique({
+      where: { productId: prodA2.id },
+    });
+    check("B ne lit pas la publication de A par productId", vole === null);
+
+    let depublicationBloquee = false;
+    try {
+      await dbB.metaCatalogItem.update({
+        where: { productId: prodA2.id },
+        data: { published: false },
+      });
+    } catch {
+      depublicationBloquee = true;
+    }
+    check("B ne peut pas dépublier l'article de A", depublicationBloquee);
+
+    const intact = await dbA.metaCatalogItem.findFirst({
+      where: { productId: prodA2.id },
+    });
+    check("l'article de A est toujours publié", intact?.published === true);
+
+    await dbB.metaCatalogItem.deleteMany({});
+    check(
+      "un deleteMany de B n'efface pas les publications de A",
+      (await dbA.metaCatalogItem.count()) === 1
+    );
 
     console.log("\nCompteurs");
 

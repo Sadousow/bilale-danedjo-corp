@@ -174,7 +174,12 @@ export async function createCustomerFromPos(name: string, phone: string) {
 
   const cleanPhone = phone.trim() || null;
   if (cleanPhone) {
-    const existing = await prisma.customer.findUnique({
+    /*
+     * `findFirst` : `phone` est sous `@@unique([tenantId, phone])`. Un
+     * `findUnique` lèverait ici — en pleine caisse, au moment d'attacher un
+     * client à une vente.
+     */
+    const existing = await prisma.customer.findFirst({
       where: { phone: cleanPhone },
     });
     if (existing) {

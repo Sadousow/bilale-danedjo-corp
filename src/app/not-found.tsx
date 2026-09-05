@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 
-import { TENANT_HOST_HEADER, classifyHost } from "@/lib/tenant";
+import { TENANT_HOST_HEADER } from "@/lib/tenant";
+import { classifyHost } from "@/lib/host";
 
 export const dynamic = "force-dynamic";
 

@@ -64,6 +64,7 @@ model Tenant {
   orders           Order[]
   orderItems       OrderItem[]
   settings         Settings?
+  metaCatalogItems MetaCatalogItem[]
 
   @@index([status])
 }
@@ -364,6 +365,18 @@ model Product {
   name        String
   description String  @default("")
   image       String  @default("")
+  /// Dimensions de `image`, en pixels, relevées au téléversement.
+  ///
+  /// Elles n'existent que pour la publication sur un catalogue externe : Meta
+  /// exige au moins 500 × 500 px et rejette silencieusement en dessous. Les
+  /// stocker permet de dire au marchand « photo trop petite » dans sa liste de
+  /// produits, sans aller chercher le fichier à chaque affichage.
+  ///
+  /// Nulles sur les produits créés avant cette colonne, et sur toute image
+  /// dont la mesure a échoué. Nul ne veut pas dire « trop petite » : voir
+  /// `src/lib/meta-catalog.ts`, qui traite ce cas explicitement.
+  imageWidth  Int?
+  imageHeight Int?
   unit        String? // sac, bidon, carton, pièce...
 
   price Int // prix de vente en GNF (entier, pas de centimes)
@@ -389,6 +402,7 @@ model Product {
   stockMovements StockMovement[]
   documentItems  DocumentItem[]
   orderItems     OrderItem[]
+  metaCatalogItem MetaCatalogItem?
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -933,4 +947,71 @@ model Settings {
   orderConfirmation    String  @default("Merci ! Nous vous appelons pour confirmer votre commande.")
 
   updatedAt DateTime @updatedAt
+}
+
+
+// ------------------------------------------------------------ Catalogue Meta
+
+/// État d'un article vis-à-vis du catalogue Meta.
+///
+/// `EN_ATTENTE` : le marchand l'a publié, rien n'est encore parti.
+/// `PUBLIE`     : Meta l'a accepté.
+/// `REJETE`     : Meta l'a refusé — le motif est dans `rejectionMessage`.
+/// `RETIRE`     : dépublié par le marchand, suppression confirmée chez Meta.
+enum ItemSyncStatus {
+  EN_ATTENTE
+  PUBLIE
+  REJETE
+  RETIRE
+}
+
+/// Décision de publier **cet** article sur le catalogue Meta du marchand.
+///
+/// Le catalogue Guygou n'est pas le catalogue Meta : un marchand ne pousse
+/// qu'une sélection. La publication est donc opt-in, article par article —
+/// même choix que `Settings.shopPublished`, faux par défaut, pour qu'aucune
+/// donnée ne parte sans un geste explicite.
+///
+/// Une ligne n'existe qu'à partir du premier clic du marchand. L'absence de
+/// ligne signifie « jamais publié », ce qui évite d'en créer 40 000 pour rien.
+///
+/// ⚠️ Modèle **métier** : il porte `tenantId`, donc il doit figurer dans le
+/// `Set TENANT_SCOPED` de `src/lib/tenant-db.ts`. Sans cela il n'est filtré
+/// par rien et la fuite est silencieuse. À l'inverse des tables de
+/// raccordement de plateforme, qui restent hors garde par nature.
+model MetaCatalogItem {
+  id String @id @default(cuid())
+
+  /// Contrainte unique **globale**, et c'est volontaire — seule exception à la
+  /// règle « toutes les contraintes uniques sont composites ».
+  ///
+  /// Cette règle protège les identifiants *métier* que deux marchands doivent
+  /// pouvoir réutiliser : un même `sku`, un même numéro de facture. Ici la
+  /// colonne pointe une clé primaire cuid, déjà unique au niveau de la base :
+  /// une collision entre tenants est impossible par construction. Et la
+  /// relation un-à-un l'exige.
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// Décision du marchand. Ne dit rien de l'état réel chez Meta : un article
+  /// peut être publié ici et rejeté là-bas — c'est `syncStatus` qui l'indique.
+  published Boolean @default(false)
+
+  syncStatus   ItemSyncStatus @default(EN_ATTENTE)
+  lastSyncedAt DateTime?
+
+  /// Motif de refus **en français, écrit pour le marchand**, pas le code brut
+  /// de Meta. Sans cette phrase, chaque rejet devient un ticket de support :
+  /// le marchand voit un article absent de ses publicités et n'a aucun moyen
+  /// de comprendre pourquoi.
+  rejectionMessage String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, published])
+  @@index([tenantId, syncStatus])
 }

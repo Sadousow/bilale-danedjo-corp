@@ -25,7 +25,11 @@ export async function saveCustomerAction(
   if (!name) return { error: "Le nom du client est obligatoire." };
 
   if (phone) {
-    const existing = await prisma.customer.findUnique({ where: { phone } });
+    /*
+     * `findFirst` : `phone` est sous `@@unique([tenantId, phone])`, donc plus
+     * unique à lui seul. Voir la note de src/app/admin/produits/actions.ts.
+     */
+    const existing = await prisma.customer.findFirst({ where: { phone } });
     if (existing && existing.id !== id) {
       return { error: "Ce numéro de téléphone est déjà associé à un autre client." };
     }

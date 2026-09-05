@@ -4,22 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard,
-  Package,
-  Boxes,
-  Receipt,
-  Users,
-  UserCog,
   BarChart3,
-  FileText,
-  Settings,
+  Boxes,
   CreditCard,
-  Palette,
+  FileText,
+  LayoutDashboard,
   LayoutTemplate,
   Lock,
-  ScanLine,
-  ShoppingBag,
   Menu,
+  Package,
+  Palette,
+  Receipt,
+  ScanLine,
+  Settings,
+  Share2,
+  ShoppingBag,
+  UserCog,
+  Users,
   X,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ const items = [
   { href: "/admin/abonnement", label: "Abonnement", icon: CreditCard, adminOnly: true },
   { href: "/admin/apparence", label: "Apparence", icon: Palette, adminOnly: true, exact: true },
   { href: "/admin/apparence/accueil", label: "Page d'accueil", icon: LayoutTemplate, adminOnly: true, feature: "shop" },
+  { href: "/admin/reseaux-sociaux", label: "Réseaux sociaux", icon: Share2, adminOnly: true },
   { href: "/admin/parametres", label: "Paramètres", icon: Settings, adminOnly: true },
 ];
 

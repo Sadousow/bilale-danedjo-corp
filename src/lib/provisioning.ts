@@ -3,10 +3,12 @@ import "server-only";
 import bcrypt from "bcryptjs";
 
 import { platformDb } from "@/lib/db";
-import { isSlugAvailableFormat } from "@/lib/tenant";
+import { isSlugAvailableFormat } from "@/lib/host";
 import { categories as defaultCategories } from "@/lib/products";
 import { addDays, TRIAL_DAYS } from "@/lib/plans";
 import { normalizePhone } from "@/lib/orders";
+import { attachDomainToVercel } from "@/lib/domains";
+import { decideRattachement } from "@/lib/shop-domain";
 
 /**
  * Création d'une boutique.
@@ -41,8 +43,23 @@ export type CreateTenantInput = {
   status?: "ESSAI" | "ACTIF";
 };
 
+/**
+ * Résultat du rattachement de l'adresse chez l'hébergeur.
+ *
+ * Volontairement séparé du succès de la création : une boutique créée dont
+ * l'adresse n'est pas encore déclarée existe bel et bien et se répare d'un
+ * script. L'inverse — refuser l'inscription parce que l'API de l'hébergeur
+ * est indisponible — ferait perdre un client pour une panne qui n'est pas la
+ * sienne.
+ */
+export type RattachementDomaine = {
+  ok: boolean;
+  message: string;
+  host?: string;
+};
+
 export type CreateTenantResult =
-  | { ok: true; tenantId: string; slug: string }
+  | { ok: true; tenantId: string; slug: string; domaine: RattachementDomaine }
   | { ok: false; error: string };
 
 /** Le slug est-il bien formé et encore libre ? */
@@ -76,6 +93,53 @@ export function suggestSlug(name: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 30);
+}
+
+/**
+ * Déclare l'adresse de la boutique chez l'hébergeur, sans jamais lever.
+ *
+ * Un échec est retourné, pas propagé : la boutique existe déjà en base à ce
+ * stade. `scripts/rattacher-domaines.mjs` rattrape les adresses restées en
+ * arrière.
+ */
+export async function rattacherAdresse(
+  slug: string
+): Promise<RattachementDomaine> {
+  const decision = decideRattachement(slug);
+
+  if (!decision.rattacher) {
+    const messages = {
+      "developpement-local":
+        "Adresse non déclarée : domaine racine de développement.",
+      "domaine-racine-absent":
+        "Adresse non déclarée : NEXT_PUBLIC_ROOT_DOMAIN n'est pas défini.",
+      "slug-invalide": "Adresse non déclarée : slug invalide.",
+    } as const;
+    return { ok: false, message: messages[decision.raison] };
+  }
+
+  try {
+    const resultat = await attachDomainToVercel(decision.host);
+    if (!resultat.ok) {
+      console.warn(
+        `[provisioning] ${decision.host} non rattaché : ${resultat.message}`
+      );
+    }
+    return { ...resultat, host: decision.host };
+  } catch (error) {
+    /*
+     * `attachDomainToVercel` capture déjà ses erreurs réseau, mais une
+     * exception inattendue ici annulerait une inscription réussie. Ce filet
+     * n'est pas du zèle : c'est la dernière chose entre une panne d'API et un
+     * client perdu.
+     */
+    console.warn(`[provisioning] rattachement de ${decision.host} échoué`, error);
+    return {
+      ok: false,
+      message: "L'adresse n'a pas pu être déclarée. Elle le sera au prochain passage.",
+      host: decision.host,
+    };
+  }
 }
 
 export async function createTenant(
@@ -169,7 +233,23 @@ export async function createTenant(
       return created;
     });
 
-    return { ok: true, tenantId: tenant.id, slug: tenant.slug };
+    /*
+     * Rattachement de l'adresse **après** la transaction, jamais dedans.
+     *
+     * Un appel réseau dans une transaction la maintiendrait ouverte le temps
+     * d'un aller-retour vers Vercel, et un délai d'attente annulerait une
+     * boutique déjà entièrement écrite.
+     *
+     * Ce que ça fait : l'enregistrement `*` du DNS fait résoudre
+     * `<slug>.guygou.com`, mais Vercel ne présente un certificat que pour les
+     * noms déclarés sur le projet. Sans cet appel, la boutique résout et
+     * refuse la connexion — erreur de certificat côté navigateur, ou 525 si
+     * Cloudflare proxifie. Le marchand voit une boutique morte le jour de son
+     * inscription.
+     */
+    const domaine = await rattacherAdresse(tenant.slug);
+
+    return { ok: true, tenantId: tenant.id, slug: tenant.slug, domaine };
   } catch {
     return {
       ok: false,

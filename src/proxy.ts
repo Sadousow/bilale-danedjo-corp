@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { SESSION_COOKIE, hasRole, verifySession } from "@/lib/session";
-import { TENANT_HOST_HEADER, classifyHost } from "@/lib/tenant";
+import { TENANT_HOST_HEADER } from "@/lib/tenant";
+// Depuis `@/lib/host` et non `@/lib/tenant` : le proxy tourne sur l'edge, et
+// n'a aucune raison d'y traîner Prisma pour une analyse de chaîne.
+import { classifyHost } from "@/lib/host";
 import { PATHNAME_HEADER } from "@/lib/plans";
 import {
   contentSecurityPolicy,

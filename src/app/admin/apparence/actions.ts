@@ -20,18 +20,7 @@ export type AppearanceInput = {
   highlights: Highlight[];
   aboutText: string;
   openingHours: string;
-  socialFacebook: string;
-  socialInstagram: string;
-  socialTiktok: string;
 };
-
-/** Une URL de réseau social vide reste vide ; sinon on force le protocole. */
-function normalizeUrl(raw: string): string {
-  const value = raw.trim();
-  if (!value) return "";
-  if (/^https?:\/\//i.test(value)) return value;
-  return `https://${value.replace(/^\/+/, "")}`;
-}
 
 export async function saveAppearanceAction(
   input: AppearanceInput
@@ -65,9 +54,6 @@ export async function saveAppearanceAction(
       highlights,
       aboutText: input.aboutText.trim(),
       openingHours: input.openingHours.trim(),
-      socialFacebook: normalizeUrl(input.socialFacebook),
-      socialInstagram: normalizeUrl(input.socialInstagram),
-      socialTiktok: normalizeUrl(input.socialTiktok),
     },
   });
 

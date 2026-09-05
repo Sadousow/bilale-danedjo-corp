@@ -15,11 +15,18 @@
     "test:securite": "tsx scripts/test-securite.mjs",
     "test:messages": "tsx scripts/test-messages.mjs",
     "test:quotas": "tsx scripts/test-quotas.mjs",
+    "test:hote": "tsx scripts/test-hote.mjs",
+    "test:abonnement": "tsx scripts/test-abonnement.mjs",
+    "test:console": "tsx scripts/test-console.mjs",
     "platform:user": "node scripts/create-platform-user.mjs",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:reseaux": "tsx scripts/test-reseaux.mjs",
+    "test:meta": "tsx scripts/test-meta-catalog.mjs",
+    "test:domaines": "tsx scripts/test-domaines.mjs",
+    "verif:requetes": "node scripts/verifier-requetes.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -114,6 +114,26 @@ Le certificat wildcard exige une validation DNS : Vercel demande un
 enregistrement `TXT` sur `_acme-challenge`. À ajouter chez le registrar, une
 seule fois.
 
+### Ce que les aperçus de branche peuvent, et ne peuvent pas
+
+Une adresse d'aperçu Vercel — `…-git-ma-branche-….vercel.app` — ne correspond
+ni au domaine racine, ni à un sous-domaine, ni à un domaine vérifié. Elle
+affichait donc **« cette boutique n'existe pas » sur toutes ses pages**, ce qui
+ressemble à un déploiement raté alors que l'application tourne parfaitement.
+
+`classifyHost()` rattache désormais tout host en `.vercel.app` à la zone
+plateforme. Sur un aperçu, on peut donc voir la vitrine, l'inscription et la
+console.
+
+**Les boutiques, non.** Une adresse d'aperçu est un host unique : aucun
+sous-domaine ne peut y pointer, et Vercel ne délivre pas de certificat joker
+dessus. Tester un marchand exige le vrai domaine avec son `*.` — c'est une
+limite de l'hébergement, pas du code.
+
+Conséquence pratique : `NEXT_PUBLIC_ROOT_DOMAIN` doit valoir le domaine réel
+**dans tous les environnements Vercel**, y compris Preview. Laissée vide, elle
+retombe sur `localhost:3000` et plus rien ne peut correspondre.
+
 ---
 
 ## 5. Domaines personnalisés des marchands

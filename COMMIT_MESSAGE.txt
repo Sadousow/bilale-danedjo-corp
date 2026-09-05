@@ -1,0 +1,42 @@
+feat: Meta catalog selection, social links section, and shop domain attachment
+
+Three connected pieces of work, plus the fixes and guards they surfaced.
+
+Meta catalog — partial publication
+  Merchants pick which products go to their Meta catalog rather than pushing
+  everything. New MetaCatalogItem model (added to TENANT_SCOPED), hand-written
+  migration, and an eligibility check that refuses locally — with a reason in
+  French — instead of letting Meta reject silently. The dangerous state is a
+  product published to Meta but deactivated in the shop: the ad runs and leads
+  to an empty page, with nothing failing anywhere. That state is now flagged.
+  Nothing is sent to Meta yet; the connection does not exist.
+
+Social links — dedicated section
+  Moved out of Appearance into /admin/reseaux-sociaux, with validation that was
+  missing: "@handle" became "https://@handle", a dead link shown in the footer,
+  and a Facebook URL pasted into the Instagram field went unnoticed.
+
+Shop domains — automatic attachment
+  A wildcard DNS record makes <slug>.guygou.com resolve, but Vercel only serves
+  a certificate for hostnames declared on the project. Without that call, a new
+  shop resolves and refuses the connection. Provisioning now declares it after
+  the transaction, never inside it, and never fails signup over it.
+
+Fixes
+  findUnique on sku/phone stopped working when uniqueness became composite with
+  tenantId. Three occurrences, including the POS path that attaches a customer
+  to a sale. tsc had flagged them; ignoreBuildErrors let them ship.
+
+Guards
+  verif:requetes detects both documented blind spots of the tenant guard —
+  findUnique on a composite field, and raw SQL without tenantId — deriving the
+  field list from the schema itself.
+  Migration history is not replayable: mig2 and plateforme both add
+  Settings.slogan, and migrate dev replays alphabetically. diagnostic-migrations
+  and reparer-mig2 document and fix it. Use db:migrate:deploy meanwhile.
+
+New test suites, all pure logic, no database:
+  test:meta (58), test:reseaux (41), test:domaines (23)
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_019Xd6mK7hxL7xkwz8UVBGmU

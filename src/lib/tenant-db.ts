@@ -29,6 +29,7 @@ const TENANT_SCOPED = new Set([
   "Order",
   "OrderItem",
   "Settings",
+  "MetaCatalogItem",
 ]);
 
 type Args = Record<string, unknown>;

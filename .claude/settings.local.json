@@ -20,7 +20,27 @@
       "Bash(cp \"C:/Users/Sow/AppData/Local/Temp/916a796f-33a3-4602-ba19-ed7314fb9e58.tmp\" \"C:/Users/Sow/Documents/bilale_danedjo_corp/public/brand/logo-source.webp\")",
       "Bash(node -e ' *)",
       "Bash(git checkout *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\Sow\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Sow-Documents-bilale-danedjo-corp\\\\ea1d0328-ab7f-4785-98e0-208748279a0c\\\\scratchpad\\\\etat.mjs\")",
+      "PowerShell(npx tsx scripts/test-abonnement.mjs)",
+      "PowerShell(npx prisma generate 2>&1 | Select-Object -Last 5; npx tsc --noEmit)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(npx tsc --noEmit)",
+      "PowerShell(npx eslint src 2>&1 | Select-Object -Last 30)",
+      "PowerShell(npm run *)",
+      "PowerShell(node --env-file=.env _scratch-scenario.mjs snapshot; node --env-file=.env _scratch-scenario.mjs expire; npx tsx --env-file=.env _scratch-verif.mjs)",
+      "PowerShell(node --env-file=.env _scratch-scenario.mjs restore; node --env-file=.env _scratch-scenario.mjs expire; npx tsx --conditions=react-server --env-file=.env _scratch-verif.mjs)",
+      "PowerShell(node --env-file=.env _scratch-scenario.mjs restore; node --env-file=.env _scratch-scenario.mjs expire; Invoke-RestMethod -Uri \"http://localhost:3000/api/abonnement/cycle\" -TimeoutSec 120 | ConvertTo-Json -Depth 3)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:3000/api/abonnement/cycle\" -TimeoutSec 120 | ConvertTo-Json -Depth 3; node --env-file=.env _scratch-scenario.mjs etat)",
+      "PowerShell(node --env-file=.env _scratch-sain.mjs)",
+      "PowerShell(npx tsx --conditions=react-server --env-file=.env _scratch-lien.mjs 620499596)",
+      "PowerShell(node --env-file=.env _scratch-auth.mjs)",
+      "PowerShell(Get-ChildItem -Force | Where-Object { $_.Name -in @\\('vercel.json','.vercel','.git','next.config.ts'\\) } | Select-Object Name; \"---- git ----\"; git status --short | Measure-Object -Line; git branch --show-current; git log --oneline -3; \"---- remote ----\"; git remote -v)",
+      "PowerShell(\"=== fichiers modifiés/non suivis ===\"; \\(git status --porcelain\\).Count; \"=== derniers commits poussés ? ===\"; git log --oneline origin/main -1 2>&1; git log --oneline origin/feature/motion-design -1 2>&1; \"=== vercel CLI ===\"; if \\(Get-Command vercel -ErrorAction SilentlyContinue\\) { vercel --version } else { \"non installé\" })",
+      "PowerShell(git push *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(git *)",
+      "PowerShell(git grep -h -o -E 'process\\\\.env\\\\.[A-Z0-9_]+' -- src prisma scripts next.config.ts | ForEach-Object { $_ -replace 'process\\\\.env\\\\.','' } | Sort-Object -Unique)"
     ]
   }
 }

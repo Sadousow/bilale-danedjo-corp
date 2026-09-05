@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Plus, Save, Trash2 } from "lucide-react";
 
@@ -313,7 +314,7 @@ export default function AppearanceForm({
 
       {/* Coordonnées publiques */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 space-y-4">
-        <h2 className="font-semibold text-slate-800">Horaires et réseaux</h2>
+        <h2 className="font-semibold text-slate-800">Horaires d\u2019ouverture</h2>
 
         <div>
           <label className={label} htmlFor="openingHours">
@@ -328,30 +329,15 @@ export default function AppearanceForm({
           />
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-4">
-          {(
-            [
-              ["socialFacebook", "Facebook"],
-              ["socialInstagram", "Instagram"],
-              ["socialTiktok", "TikTok"],
-            ] as const
-          ).map(([key, text]) => (
-            <div key={key}>
-              <label className={label} htmlFor={key}>
-                {text}
-              </label>
-              <input
-                id={key}
-                value={form[key]}
-                onChange={(e) => update(key, e.target.value)}
-                className={input}
-                placeholder="facebook.com/ma-page"
-              />
-            </div>
-          ))}
-        </div>
         <p className="text-xs text-slate-400">
-          Laissez vide pour masquer l&apos;icône correspondante.
+          Les liens vers vos réseaux sociaux ont leur propre écran :{" "}
+          <Link
+            href="/admin/reseaux-sociaux"
+            className="text-brand-blue underline underline-offset-2"
+          >
+            Réseaux sociaux
+          </Link>
+          .
         </p>
       </div>
 

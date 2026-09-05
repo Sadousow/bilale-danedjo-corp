@@ -77,7 +77,15 @@ export async function createProductAction(
   const stock = num(formData, "stock");
   let sku = String(formData.get("sku") ?? "").trim() || slugify(data.name);
 
-  if (await prisma.product.findUnique({ where: { sku } })) {
+  /*
+   * `findFirst`, jamais `findUnique`.
+   *
+   * Depuis le multi-tenant, `sku` n'est plus unique seul : la contrainte est
+   * `@@unique([tenantId, sku])`. La garde injecte bien `tenantId`, mais
+   * `findUnique` n'accepte que `id` ou le couple `tenantId_sku` — deux champs
+   * séparés ne forment pas une clé composite, et Prisma lève à l'exécution.
+   */
+  if (await prisma.product.findFirst({ where: { sku } })) {
     sku = `${sku}-${Date.now().toString().slice(-4)}`;
   }
 
@@ -124,10 +132,18 @@ export async function updateProductAction(
   redirect("/admin/produits?ok=modifie");
 }
 
-export async function toggleProductAction(formData: FormData) {
+/**
+ * Active ou désactive un produit.
+ *
+ * L'identifiant arrive par `.bind(null, id)`, **pas** par le `FormData`.
+ * React 19 ne transmet pas le `name`/`value` du bouton de soumission à une
+ * Server Action déclenchée par `formAction` : `formData.get("id")` y vaut
+ * toujours `null`. Ne pas revenir à un bouton `name="id"`.
+ */
+export async function toggleProductAction(id: string, _formData: FormData) {
   const prisma = await db();
   await requireRole("GERANT");
-  const id = String(formData.get("id") ?? "");
+  if (!id) return;
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) return;
 
